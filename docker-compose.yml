@@ -1,10 +1,20 @@
 version: "3.4"
 
 services:
-  whisper-asr-webservice-gpu:
+  whisper_api:
     build:
-      context: .
+      context: ./whisper-api-batched-inference
       dockerfile: Dockerfile
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./whisper-api-batched-inference:/app
+      - ./whisper-api-batched-inference/models:/models
+      - cache-pip:/root/.cache/pip
+      - cache-whisper:/root/.cache/whisper
+    environment:
+      - ASR_MODEL=openai/whisper-large-v3
+      - HUGGINGFACE_HUB_CACHE=/models
     deploy:
       resources:
         reservations:
@@ -12,15 +22,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    environment:
-      - ASR_MODEL=base
-    ports:
-      - "9000:9000"
-    volumes:
-      - ./app:/app/app
-      - cache-pip:/root/.cache/pip
-      - cache-poetry:/root/.cache/poetry
-      - cache-whisper:/root/.cache/whisper
 
 volumes:
   cache-pip:
