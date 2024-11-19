@@ -1,13 +1,22 @@
 from typing import Optional
 import os
 import time
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI, File, UploadFile, Form, Request
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
+from tempfile import NamedTemporaryFile
+import logging
 
 from whisper_tools import WhisperTools
 
 whisper_tools = WhisperTools()
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,6 +25,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Add health check endpoint
+@app.get("/health")
+async def health_check():
+    try:
+        return {
+            "status": "healthy",
+            "timestamp": time.time(),
+            "service": "whisper-api"
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": time.time(),
+            "service": "whisper-api"
+        }, 503
+
 @app.post("/transcribe")
 async def transcribe(
     file: UploadFile = File(...),
@@ -23,27 +50,27 @@ async def transcribe(
     language: Optional[str] = None,
     prompt: str = ""
 ):
-    temp_file = f"temp-{time.time_ns()}.wav"
     try:
-        with open(temp_file, "wb") as buffer:
-            buffer.write(await file.read())
-        
-        transcript, segments, detected_language, detected_num_speakers = whisper_tools.transcribe(
-            temp_file,
-            num_speakers,
-            language,
-            prompt
-        )
-        
-        return {
-            "transcript": transcript,
-            "segments": segments,
-            "detected_language": detected_language,
-            "detected_num_speakers": detected_num_speakers
-        }
-    finally:
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+        with NamedTemporaryFile(suffix='.wav', delete=True) as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_file.flush()
+            
+            transcript, segments, detected_language, detected_num_speakers = whisper_tools.transcribe(
+                temp_file.name,
+                num_speakers,
+                language,
+                prompt
+            )
+            
+            return {
+                "transcript": transcript,
+                "segments": segments,
+                "detected_language": detected_language,
+                "detected_num_speakers": detected_num_speakers
+            }
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 if __name__ == "__main__":
     import uvicorn

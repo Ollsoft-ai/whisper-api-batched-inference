@@ -5,15 +5,48 @@ import os
 import time
 import torch
 import numpy as np
-from transformers import pipeline
+from transformers import pipeline, AutoModel
 from pyannote.audio import Pipeline
 import torchaudio
 from rich.progress import Progress, TimeElapsedColumn, BarColumn, TextColumn
 
 class WhisperTools():
+    def download_models(self):
+        """Download the models without loading them into GPU memory"""
+        model_name = os.getenv("ASR_MODEL", "openai/whisper-large-v3")
+        
+        # Download Whisper model
+        print(f"Downloading ASR model: {model_name}")
+        AutoModel.from_pretrained(
+            model_name,
+            cache_dir=os.getenv("HUGGINGFACE_HUB_CACHE", "models"),
+        )
+        
+        # Download Diarization model
+        print("Downloading diarization model")
+        from pyannote.audio import Pipeline
+        Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-3.1",
+            use_auth_token=os.getenv("HF_TOKEN"),
+            cache_dir=os.getenv("HUGGINGFACE_HUB_CACHE", "models"),
+        )
+        
+        print("Models downloaded successfully")
+
+
     def setup(self):
         """Load the model into memory to make running multiple predictions efficient"""
         print("cudaa", torch.cuda.is_available(), torch.version.cuda)
+
+        # Set VRAM limit in MB (e.g., 8192 for 8GB)
+        vram_limit_mb = int(os.getenv("WHISPER_VRAM", "8192"))
+        total_vram_mb = torch.cuda.get_device_properties(0).total_memory / (1024 * 1024)
+        
+        # Clear cache and set memory fraction
+        torch.cuda.empty_cache()
+        torch.cuda.set_per_process_memory_fraction(vram_limit_mb / total_vram_mb)
+        
+        print(f"VRAM limit set to {vram_limit_mb}MB out of {total_vram_mb:.0f}MB total")
 
         model_name = os.getenv("ASR_MODEL", "openai/whisper-large-v3")
         self.model = pipeline(

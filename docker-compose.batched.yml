@@ -1,0 +1,142 @@
+version: "3.4"
+
+services:
+  model_init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./models:/models
+      - cache-pip:/root/.cache/pip
+      - cache-whisper:/root/.cache/whisper
+    environment:
+      - ASR_MODEL=openai/whisper-large-v3
+      - HUGGINGFACE_HUB_CACHE=/models
+      - CUDA_VISIBLE_DEVICES=0
+      - WHISPER_VRAM=7500
+    command: python init_model.py
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      model_init:
+        condition: service_completed_successfully
+      whisper_api1:
+        condition: service_healthy
+      whisper_api2:
+        condition: service_healthy
+      whisper_api3:
+        condition: service_healthy
+
+  whisper_api1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./models:/models
+      - cache-pip:/root/.cache/pip
+      - cache-whisper:/root/.cache/whisper
+    environment:
+      - ASR_MODEL=openai/whisper-large-v3
+      - HUGGINGFACE_HUB_CACHE=/models
+      - CUDA_VISIBLE_DEVICES=0
+      - WHISPER_VRAM=7500
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    depends_on:
+      model_init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  whisper_api2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./models:/models
+      - cache-pip:/root/.cache/pip
+      - cache-whisper:/root/.cache/whisper
+    environment:
+      - ASR_MODEL=openai/whisper-large-v3
+      - HUGGINGFACE_HUB_CACHE=/models
+      - CUDA_VISIBLE_DEVICES=0
+      - WHISPER_VRAM=7500
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    depends_on:
+      model_init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  whisper_api3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./models:/models
+      - cache-pip:/root/.cache/pip
+      - cache-whisper:/root/.cache/whisper
+    environment:
+      - ASR_MODEL=openai/whisper-large-v3
+      - HUGGINGFACE_HUB_CACHE=/models
+      - CUDA_VISIBLE_DEVICES=0
+      - WHISPER_VRAM=7500
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    depends_on:
+      model_init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  cache-pip:
+  cache-whisper:
