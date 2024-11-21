@@ -14,8 +14,8 @@ class WhisperBatchInference:
     def __init__(
         self,
         model_name: str = "openai/whisper-large-v3",
-        batch_size: int = 64,
-        max_wait_ms: int = 1000,
+        batch_size: int = 24,
+        max_wait_ms: int = 10000,
     ):
         self.model_name = model_name
         self.batch_size = batch_size
@@ -25,13 +25,16 @@ class WhisperBatchInference:
         self.setup_model()
 
     def setup_model(self):
+        if (not torch.cuda.is_available()):
+            raise Exception("CUDA is not available")
+        
         self.processor = AutoProcessor.from_pretrained(self.model_name)
         self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
             self.model_name,
             torch_dtype=torch.float16,
             low_cpu_mem_usage=True,
             use_safetensors=True,
-        ).to("cuda" if torch.cuda.is_available() else "cpu")
+        ).to("cuda")
 
         self.pipeline = pipeline(
             "automatic-speech-recognition",
@@ -39,7 +42,7 @@ class WhisperBatchInference:
             tokenizer=self.processor.tokenizer,
             feature_extractor=self.processor.feature_extractor,
             torch_dtype=torch.float16,
-            device="cuda" if torch.cuda.is_available() else "cpu",
+            device="cuda",
         )
 
     async def process_audio(self, audio_data: np.ndarray) -> str:
