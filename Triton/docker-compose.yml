@@ -6,6 +6,8 @@ services:
       - "8000:8000"
       - "8001:8001"
       - "8002:8002"
+    volumes:
+      - whisper_models:/app/models
     environment:
       - PYTHONIOENCODING=utf-8
       - MODEL_ID=large-v3-turbo
@@ -18,3 +20,6 @@ services:
               capabilities: [gpu]
     command: >
       /bin/bash -c "bash prepare.sh large-v3-turbo"
+
+volumes:
+  whisper_models:

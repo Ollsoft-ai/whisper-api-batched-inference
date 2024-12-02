@@ -20,14 +20,6 @@ parameters [
   {
     key: "engine_dir"
     value: { string_value: "${engine_dir}"}
-  },
-  {
-    key: "chunk_length"
-    value: { string_value: "30" }
-  },
-  {
-    key: "overlap_seconds"
-    value: { string_value: "0.5" }
   }
 ]
 

@@ -10,11 +10,19 @@ build_model() {
     local model_id=$1
     local checkpoint_dir=$2
     local output_dir=$3
+    local models_dir="/app/models"
 
     local URL=${MODELS[$model_id]}
     
-    echo "Downloading $MODEL_ID from $URL..."
-    wget -nc "$URL"
+    mkdir -p "$models_dir"
+    cd "$models_dir"
+    
+    if [ ! -f "$(basename $URL)" ]; then
+        echo "Downloading $MODEL_ID from $URL..."
+        wget "$URL"
+    else
+        echo "Model already exists, skipping download"
+    fi
 
     echo "Converting checkpoint for model: $model_id"
     python3 convert_checkpoint.py \
@@ -68,7 +76,7 @@ launch_triton_repo_python_backend() {
     wget -nc --directory-prefix=$model_repo/whisper/1 https://raw.githubusercontent.com/openai/whisper/main/whisper/assets/mel_filters.npz
 
     TRITON_MAX_BATCH_SIZE=64
-    MAX_QUEUE_DELAY_MICROSECONDS=3000000 # 3 seconds
+    MAX_QUEUE_DELAY_MICROSECONDS=100
     python3 fill_template.py -i $model_repo/whisper/config.pbtxt engine_dir:${output_dir},n_mels:$n_mels,zero_pad:$zero_pad,triton_max_batch_size:${TRITON_MAX_BATCH_SIZE},max_queue_delay_microseconds:${MAX_QUEUE_DELAY_MICROSECONDS}
     python3 fill_template.py -i $model_repo/infer_bls/config.pbtxt engine_dir:${output_dir},triton_max_batch_size:${TRITON_MAX_BATCH_SIZE},max_queue_delay_microseconds:${MAX_QUEUE_DELAY_MICROSECONDS}
     echo "Launching triton server with model_repo: $model_repo"
@@ -90,4 +98,3 @@ else
     echo "$model_id is NOT in the MODEL_IDs array."
     exit 1
 fi
-

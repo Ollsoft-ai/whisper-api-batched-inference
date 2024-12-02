@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-torch
-transformers
-numpy
-soundfile
-python-multipart
-pydantic

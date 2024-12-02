@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from tempfile import NamedTemporaryFile
 import logging
 
-from whisper_tools import WhisperTools
+from old_whisper_tools import WhisperTools
 
 whisper_tools = WhisperTools()
 

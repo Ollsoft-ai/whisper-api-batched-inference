@@ -94,6 +94,7 @@ class TritonPythonModel:
         # as they will be overridden in subsequent inference requests. You can
         # make a copy of the underlying NumPy array and store it if it is
         # required.
+        print("GOT REQUESTS")
         responses = []
         for request in requests:
             # Perform inference on the request and append it to responses list...
